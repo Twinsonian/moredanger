@@ -30,8 +30,9 @@ function M.boost_mob(obj, luaent)
 
     -- Store base HP once
     if not luaent._moredanger_base_hp then
-        luaent._moredanger_base_hp = props.hp_max
+        luaent._moredanger_base_hp = obj:get_hp()
     end
+
 
     if luaent._moredanger_boosted then return end
 

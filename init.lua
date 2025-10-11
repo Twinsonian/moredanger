@@ -1,34 +1,55 @@
 -- Load modules
-local debug = dofile(minetest.get_modpath("moredanger") .. "/md_debug.lua")
-local register_commands = dofile(minetest.get_modpath("moredanger") .. "/md_commands.lua")
-local gui = dofile(minetest.get_modpath("moredanger") .. "/md_gui.lua")
+local modname = minetest.get_current_modname()
+
+local debug = dofile(minetest.get_modpath(modname) .. "/md_debug.lua")
+local register_commands = dofile(minetest.get_modpath(modname) .. "/md_commands.lua")
+local gui = dofile(minetest.get_modpath(modname) .. "/md_gui.lua")
 local boost = nil
 local LAST_DIFFICULTY = nil
 
+local game_id = minetest.get_game_info().id or "unknown"
+local modpath = minetest.get_modpath(modname)
+
+-- Store the message to show based on environment
+local startup_message = nil
+
 -- Detect game environment
-local game_id = minetest.get_game_info().id or "unknown"
-minetest.log("action", "[moredanger] Detected game ID: " .. game_id)
-
-local game_id = minetest.get_game_info().id or "unknown"
-minetest.log("action", "[moredanger] Detected game ID: " .. game_id)
-
 if game_id == "mineclonia" then
-    boost = dofile(minetest.get_modpath("moredanger") .. "/md_mineclonia.lua")
-    minetest.after(1, function()
-        minetest.chat_send_all("More Danger Enabled for Mineclonia.")
-        minetest.log("action", "[moredanger] Mineclonia module loaded.")
-    end)
+    boost = dofile(modpath .. "/md_mineclonia.lua")
+    startup_message = "More Danger Enabled for Mineclonia."
+
+elseif game_id == "mineclone2" then
+    boost = dofile(modpath .. "/md_voxellibre.lua")
+    startup_message = "More Danger Enabled for VoxelLibre."
+
 elseif minetest.get_modpath("mobs") then
-    boost = dofile(minetest.get_modpath("moredanger") .. "/md_mobsredo.lua")
-    minetest.after(1, function()
-        minetest.chat_send_all("More Danger Enabled for Mobs Redo.")
-        minetest.log("action", "[moredanger] Mobs Redo module loaded.")
-    end)
+    boost = dofile(modpath .. "/md_mobsredo.lua")
+    startup_message = "More Danger Enabled for Mobs Redo."
+
 else
-    minetest.log("action", "[moredanger] No compatible mob API detected. Mod disabled.")
+    startup_message = "More Danger could not be enabled — no compatible mob API found."
     return
 end
 
+-- Show startup message as a temporary HUD to the first player who joins
+local notified = false
+minetest.register_on_joinplayer(function(player)
+    if not notified and startup_message then
+        local id = player:hud_add({
+            hud_elem_type = "text",
+            position = {x=0.5, y=0.1},
+            offset = {x=0, y=0},
+            text = startup_message,
+            alignment = {x=0, y=0},
+            scale = {x=100, y=100},
+            number = 0xFFFFFF
+        })
+        minetest.after(5, function()
+            player:hud_remove(id)
+        end)
+        notified = true
+    end
+end)
 
 -- Periodic difficulty scan
 local function periodic_difficulty_scan()
