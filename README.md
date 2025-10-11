@@ -1,4 +1,4 @@
-# moredanger_luanti
+# MoreDanger Mod for Luanti
 Scaling difficulty mob mod for multiple Luanti games/mods. Based on the difficulty mobs will have faster movement speed, more damage and more health.
 
 More Danger is a mob difficulty scaling mod that gives the player full control over how difficult mobs are in Luanti.
