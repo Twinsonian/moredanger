@@ -7,39 +7,12 @@ local DIFFICULTY_MULTIPLIERS = {
     hell      = {speed = 1.4, damage = 4, health = 30}
 }
 
-M.hostile_mobs = {
-    ["mobs_mc:zombie"] = true,
-    ["mobs_mc:skeleton"] = true,
-    ["mobs_mc:creeper"] = true,
-    ["mobs_mc:spider"] = true,
-    ["mobs_mc:enderman"] = true,
-    ["mobs_mc:witch"] = true,
-    ["mobs_mc:slime"] = true,
-    ["mobs_mc:blaze"] = true,
-    ["mobs_mc:ghast"] = true,
-    ["mobs_mc:guardian"] = true,
-    ["mobs_mc:evoker"] = true,
-    ["mobs_mc:vindicator"] = true,
-    ["mobs_mc:pillager"] = true,
-    ["mobs_mc:ravager"] = true
-}
-
-M.base_hp = {
-    ["mobs_mc:zombie"] = 20,
-    ["mobs_mc:skeleton"] = 20,
-    ["mobs_mc:creeper"] = 20,
-    ["mobs_mc:spider"] = 16,
-    ["mobs_mc:enderman"] = 40,
-    ["mobs_mc:witch"] = 26,
-    ["mobs_mc:slime"] = 16,
-    ["mobs_mc:blaze"] = 20,
-    ["mobs_mc:ghast"] = 10,
-    ["mobs_mc:guardian"] = 30,
-    ["mobs_mc:evoker"] = 24,
-    ["mobs_mc:vindicator"] = 24,
-    ["mobs_mc:pillager"] = 24,
-    ["mobs_mc:ravager"] = 100
-}
+M.hostile_mobs = setmetatable({}, {
+    __index = function(_, name)
+        local def = minetest.registered_entities[name]
+        return def and def.type == "monster"
+    end
+})
 
 function M.boost_mob(obj, luaent)
     if not luaent or not obj then return end
@@ -49,19 +22,21 @@ function M.boost_mob(obj, luaent)
     local level = DIFFICULTY_MULTIPLIERS[difficulty]
     if not level then return end
 
-    local base_hp = M.base_hp[luaent.name] or luaent.health or 10
+    -- Initialize overflow pool if missing
+    if luaent._overflow_hp == nil then
+        M.refresh_mob(obj, luaent)
+    end
 
-    -- Respect Mineclonia's clamp
+    local base_hp = luaent.initial_properties and luaent.initial_properties.hp_max or luaent.health or 10
+
     luaent.hp_max = base_hp
     luaent.health = math.min(luaent.health or base_hp, base_hp)
 
-    -- Speed boost
     if not luaent._moredanger_original_speed and luaent.movement_speed then
         luaent._moredanger_original_speed = luaent.movement_speed
     end
     luaent.movement_speed = luaent._moredanger_original_speed * level.speed
 
-    -- Damage boost
     if not luaent._moredanger_original_damage and luaent.damage then
         luaent._moredanger_original_damage = luaent.damage
     end
@@ -69,7 +44,6 @@ function M.boost_mob(obj, luaent)
         luaent.damage = luaent._moredanger_original_damage + level.damage
     end
 
-    -- Overflow healing or damage
     local current = luaent.health or 0
     local last = luaent._last_health or current
     local lost = last - current
@@ -83,14 +57,15 @@ function M.boost_mob(obj, luaent)
     end
 
     luaent._last_health = luaent.health
+    luaent._boosted = true
 end
 
 function M.refresh_mob(obj, luaent)
     local difficulty = minetest.settings:get("moredanger_difficulty") or "normal"
     local level = DIFFICULTY_MULTIPLIERS[difficulty]
-    if not level then return end  -- <-- Add this line to prevent nil access
+    if not level then return end
 
-    local base_hp = M.base_hp[luaent.name] or luaent.health or 10
+    local base_hp = luaent.initial_properties and luaent.initial_properties.hp_max or luaent.health or 10
 
     luaent._overflow_max = level.health
     luaent._overflow_hp = level.health
@@ -98,6 +73,43 @@ function M.refresh_mob(obj, luaent)
     luaent._last_health = base_hp
 end
 
+-- Runtime loop: boost nearby mobs and clean up distant ones
+local BOOST_RADIUS = 50
+local BOOST_INTERVAL = 1
+local timer = 0
+
+minetest.register_globalstep(function(dtime)
+    timer = timer + dtime
+    if timer < BOOST_INTERVAL then return end
+    timer = 0
+
+    local players = minetest.get_connected_players()
+    local seen = {}
+
+    for _, player in ipairs(players) do
+        local pos = player:get_pos()
+        local objs = minetest.get_objects_inside_radius(pos, BOOST_RADIUS)
+        for _, obj in ipairs(objs) do
+            local luaent = obj:get_luaentity()
+            if luaent and luaent.name and M.hostile_mobs[luaent.name] then
+                seen[obj] = true
+                M.boost_mob(obj, luaent)
+            end
+        end
+    end
+
+    -- Cleanup: reset mobs that were boosted but are no longer near any player
+    for _, obj in pairs(minetest.luaentities) do
+        if obj and obj.object and obj.object:get_luaentity() then
+            local luaent = obj.object:get_luaentity()
+            if luaent and luaent._boosted and not seen[obj.object] then
+                luaent.movement_speed = luaent._moredanger_original_speed or luaent.movement_speed
+                luaent.damage = luaent._moredanger_original_damage or luaent.damage
+                luaent._boosted = nil
+            end
+        end
+    end
+end)
 
 return M
 

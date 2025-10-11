@@ -1,4 +1,3 @@
--- md_voxellibre.lua
 local M = {}
 
 local DIFFICULTY_MULTIPLIERS = {
@@ -90,6 +89,7 @@ function M.boost_mob(obj, luaent)
     end
 
     luaent._last_health = luaent.health
+    luaent._boosted = true
 end
 
 -- Refresh mob when difficulty changes or on first scan
@@ -108,6 +108,47 @@ function M.refresh_mob(obj, luaent)
     luaent.health = base_hp
     luaent._last_health = base_hp
 end
+
+-- Runtime loop: boost nearby mobs and clean up distant ones
+local BOOST_RADIUS = 50
+local BOOST_INTERVAL = 1
+local timer = 0
+
+minetest.register_globalstep(function(dtime)
+    timer = timer + dtime
+    if timer < BOOST_INTERVAL then return end
+    timer = 0
+
+    local players = minetest.get_connected_players()
+    local seen = {}
+
+    for _, player in ipairs(players) do
+        local pos = player:get_pos()
+        local objs = minetest.get_objects_inside_radius(pos, BOOST_RADIUS)
+        for _, obj in ipairs(objs) do
+            local luaent = obj:get_luaentity()
+            if luaent and luaent.name and M.hostile_mobs[luaent.name] then
+                seen[obj] = true
+                M.boost_mob(obj, luaent)
+            end
+        end
+    end
+
+    -- Cleanup: reset mobs that were boosted but are no longer near any player
+    for _, obj in pairs(minetest.luaentities) do
+        if obj and obj.object and obj.object:get_luaentity() then
+            local luaent = obj.object:get_luaentity()
+            if luaent and luaent._boosted and not seen[obj.object] then
+                luaent.movement_speed = luaent._base_speed or luaent.movement_speed
+                luaent.walk_speed = luaent._base_walk_speed or luaent.walk_speed
+                luaent.run_speed = luaent._base_run_speed or luaent.run_speed
+                luaent.run_velocity = luaent._base_run_velocity or luaent.run_velocity
+                luaent.damage = luaent._base_damage or luaent.damage
+                luaent._boosted = nil
+            end
+        end
+    end
+end)
 
 return M
 

@@ -33,7 +33,6 @@ function M.boost_mob(obj, luaent)
         luaent._moredanger_base_hp = obj:get_hp()
     end
 
-
     if luaent._moredanger_boosted then return end
 
     local base_hp = luaent._moredanger_base_hp
@@ -115,6 +114,59 @@ function M.refresh_mob(obj, luaent)
 
     luaent._moredanger_boosted = true
 end
+
+-- Runtime loop: boost nearby mobs and clean up distant ones
+local BOOST_RADIUS = 50
+local BOOST_INTERVAL = 1
+local timer = 0
+
+minetest.register_globalstep(function(dtime)
+    timer = timer + dtime
+    if timer < BOOST_INTERVAL then return end
+    timer = 0
+
+    local players = minetest.get_connected_players()
+    local seen = {}
+
+    for _, player in ipairs(players) do
+        local pos = player:get_pos()
+        local objs = minetest.get_objects_inside_radius(pos, BOOST_RADIUS)
+        for _, obj in ipairs(objs) do
+            local luaent = obj:get_luaentity()
+            if luaent and luaent.name and M.hostile_mobs[luaent.name] then
+                seen[obj] = true
+                M.boost_mob(obj, luaent)
+            end
+        end
+    end
+
+    -- Cleanup: reset mobs that were boosted but are no longer near any player
+    for _, obj in pairs(minetest.luaentities) do
+        if obj and obj.object and obj.object:get_luaentity() then
+            local luaent = obj.object:get_luaentity()
+            if luaent and luaent._moredanger_boosted and not seen[obj.object] then
+                if luaent._moredanger_original_walk_velocity then
+                    luaent.walk_velocity = luaent._moredanger_original_walk_velocity
+                end
+                if luaent._moredanger_original_run_velocity then
+                    luaent.run_velocity = luaent._moredanger_original_run_velocity
+                end
+                if luaent._moredanger_original_damage then
+                    luaent.damage = luaent._moredanger_original_damage
+                    local group = luaent.damage_group or "fleshy"
+                    luaent.damage_groups = {[group] = luaent.damage}
+                end
+                if luaent._moredanger_base_hp then
+                    obj.object:set_properties({hp_max = luaent._moredanger_base_hp})
+                    obj.object:set_hp(luaent._moredanger_base_hp)
+                    luaent.hp_max = luaent._moredanger_base_hp
+                    luaent.health = luaent._moredanger_base_hp
+                end
+                luaent._moredanger_boosted = nil
+            end
+        end
+    end
+end)
 
 return M
 
