@@ -1,0 +1,2 @@
+moredanger_difficulty (Difficulty level) enum normal easy,normal,hard,nightmare,hell
+

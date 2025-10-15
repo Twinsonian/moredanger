@@ -10,6 +10,14 @@ local LAST_DIFFICULTY = nil
 local game_id = minetest.get_game_info().id or "unknown"
 local modpath = minetest.get_modpath(modname)
 
+-- Load user-configurable settings
+local enable_hard_mode = minetest.settings:get_bool("moredanger_enable_hard_mode", false)
+local enable_nightmare_mode = minetest.settings:get_bool("moredanger_enable_nightmare_mode", false)
+local enable_hell_mode = minetest.settings:get_bool("moredanger_enable_hell_mode", false)
+local debug_mode = minetest.settings:get_bool("moredanger_debug_mode", true)
+local nightmare_effect_chance = tonumber(minetest.settings:get("moredanger_nightmare_effect_chance")) or 0.33
+local hell_effect_chance = tonumber(minetest.settings:get("moredanger_hell_effect_chance")) or 0.5
+
 -- Store the message to show based on environment
 local startup_message = nil
 
@@ -81,10 +89,17 @@ local function periodic_difficulty_scan()
     minetest.after(1, periodic_difficulty_scan)
 end
 
--- Start mod
+-- Start Mod
 minetest.register_on_mods_loaded(function()
+    -- Read difficulty setting once world is loaded
+    LAST_DIFFICULTY = minetest.settings:get("moredanger_difficulty") or "normal"
+
+    minetest.log("action", "[MoreDanger] Difficulty set to: " .. LAST_DIFFICULTY)
+
+    -- Start periodic scan
     minetest.after(1, periodic_difficulty_scan)
 end)
+
 
 -- Register commands
 register_commands(boost, debug)
