@@ -11,12 +11,12 @@ local game_id = minetest.get_game_info().id or "unknown"
 local modpath = minetest.get_modpath(modname)
 
 -- Load user-configurable settings
-local enable_hard_mode = minetest.settings:get_bool("moredanger_enable_hard_mode", false)
-local enable_nightmare_mode = minetest.settings:get_bool("moredanger_enable_nightmare_mode", false)
-local enable_hell_mode = minetest.settings:get_bool("moredanger_enable_hell_mode", false)
-local debug_mode = minetest.settings:get_bool("moredanger_debug_mode", true)
-local nightmare_effect_chance = tonumber(minetest.settings:get("moredanger_nightmare_effect_chance")) or 0.33
-local hell_effect_chance = tonumber(minetest.settings:get("moredanger_hell_effect_chance")) or 0.5
+local enable_hard_mode = minetest.settings:get_bool("moredanger.enable_hard_mode", false)
+local enable_nightmare_mode = minetest.settings:get_bool("moredanger.enable_nightmare_mode", false)
+local enable_hell_mode = minetest.settings:get_bool("moredanger.enable_hell_mode", false)
+local debug_mode = minetest.settings:get_bool("moredanger.debug_mode", true)
+local nightmare_effect_chance = tonumber(minetest.settings:get("moredanger.nightmare_effect_chance")) or 0.33
+local hell_effect_chance = tonumber(minetest.settings:get("moredanger.hell_effect_chance")) or 0.5
 
 -- Store the message to show based on environment
 local startup_message = nil
