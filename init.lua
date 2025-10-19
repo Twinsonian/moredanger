@@ -26,10 +26,6 @@ if game_id == "mineclonia" then
     boost = dofile(modpath .. "/md_mineclonia.lua")
     startup_message = "More Danger Enabled for Mineclonia."
 
-elseif game_id == "mineclone2" then
-    boost = dofile(modpath .. "/md_voxellibre.lua")
-    startup_message = "More Danger Enabled for VoxelLibre."
-
 elseif minetest.get_modpath("mobs") then
     boost = dofile(modpath .. "/md_mobsredo.lua")
     startup_message = "More Danger Enabled for Mobs Redo."
