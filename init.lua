@@ -103,7 +103,7 @@ register_commands(boost, debug)
 -- Register GUI shortcut command
 minetest.register_chatcommand("md", {
     description = "Open MoreDanger GUI",
-    privs = {server=true},
+    privs = {},
     func = function(name)
         minetest.show_formspec(name, "moredanger:gui", gui.get_formspec())
     end

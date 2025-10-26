@@ -1,12 +1,9 @@
 return function(boost, debug)
     minetest.register_chatcommand("moredanger", {
         params = "mode <normal|hard|nightmare|hell>",
-        description = "Set mob difficulty (creative mode only)",
-        privs = {server=true},
+        description = "Set mob difficulty",
+        privs = {}, -- No special privileges required
         func = function(name, param)
-            if not minetest.settings:get_bool("creative_mode") then
-                return false, "This command is only available in creative mode."
-            end
             if not boost then
                 return false, "Mob API not detected. Command unavailable."
             end
@@ -30,7 +27,7 @@ return function(boost, debug)
 
     minetest.register_chatcommand("moredanger_mode", {
         description = "Show current mob difficulty mode",
-        privs = {server=true},
+        privs = {},
         func = function(name)
             local mode = minetest.settings:get("moredanger_difficulty") or "normal"
             return true, "Current difficulty mode: " .. mode
@@ -38,12 +35,9 @@ return function(boost, debug)
     })
 
     minetest.register_chatcommand("moredanger_off", {
-        description = "Disable all difficulty boosts (creative mode only)",
-        privs = {server=true},
+        description = "Disable all difficulty boosts",
+        privs = {},
         func = function(name)
-            if not minetest.settings:get_bool("creative_mode") then
-                return false, "This command is only available in creative mode."
-            end
             if not boost then
                 return false, "Mob API not detected. Command unavailable."
             end
@@ -74,7 +68,7 @@ return function(boost, debug)
 
     minetest.register_chatcommand("moredanger_debug", {
         description = "Toggle debug nametags on/off",
-        privs = {server=true},
+        privs = {},
         func = function(name)
             return debug.toggle_debug()
         end

@@ -19,6 +19,22 @@ function M.boost_mob(obj, luaent)
     if not M.hostile_mobs[luaent.name] then return end
 
     local difficulty = minetest.settings:get("moredanger_difficulty") or "normal"
+
+    -- If difficulty is "off", remove all boosts and return
+    if difficulty == "off" then
+        if luaent.add_physics_factor then
+            luaent:add_physics_factor("movement_speed", "moredanger:speed_boost", 0, "add_multiplied_base")
+        end
+        if luaent._moredanger_original_damage then
+            luaent.damage = luaent._moredanger_original_damage
+        end
+        luaent._overflow_hp = nil
+        luaent._overflow_max = nil
+        luaent._last_health = nil
+        luaent._boosted = nil
+        return
+    end
+
     local level = DIFFICULTY_MULTIPLIERS[difficulty]
     if not level then return end
 
@@ -32,10 +48,10 @@ function M.boost_mob(obj, luaent)
     luaent.hp_max = base_hp
     luaent.health = math.min(luaent.health or base_hp, base_hp)
 
-    if not luaent._moredanger_original_speed and luaent.movement_speed then
-        luaent._moredanger_original_speed = luaent.movement_speed
+    -- Apply movement speed modifier via physics factor
+    if luaent.add_physics_factor then
+        luaent:add_physics_factor("movement_speed", "moredanger:speed_boost", level.speed - 1, "add_multiplied_base")
     end
-    luaent.movement_speed = luaent._moredanger_original_speed * level.speed
 
     if not luaent._moredanger_original_damage and luaent.damage then
         luaent._moredanger_original_damage = luaent.damage
@@ -59,6 +75,8 @@ function M.boost_mob(obj, luaent)
     luaent._last_health = luaent.health
     luaent._boosted = true
 end
+
+
 
 function M.refresh_mob(obj, luaent)
     local difficulty = minetest.settings:get("moredanger_difficulty") or "normal"
@@ -99,11 +117,14 @@ minetest.register_globalstep(function(dtime)
     end
 
     -- Cleanup: reset mobs that were boosted but are no longer near any player
+-- Cleanup: reset mobs that were boosted but are no longer near any player
     for _, obj in pairs(minetest.luaentities) do
         if obj and obj.object and obj.object:get_luaentity() then
             local luaent = obj.object:get_luaentity()
             if luaent and luaent._boosted and not seen[obj.object] then
-                luaent.movement_speed = luaent._moredanger_original_speed or luaent.movement_speed
+                if luaent.add_physics_factor then
+                    luaent:add_physics_factor("movement_speed", "moredanger:speed_boost", 0, "add_multiplied_base")
+                end
                 luaent.damage = luaent._moredanger_original_damage or luaent.damage
                 luaent._boosted = nil
             end
